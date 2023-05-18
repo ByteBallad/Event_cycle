@@ -306,6 +306,134 @@ bool Mysql_Client::Db_Qxyd_ticket(int yd_id)
     return true;
 }
 
+bool Mysql_Client::Db_Dl_admin(const string &tel, string &name, string &pw)
+{
+    string sql = string("select user_name, user_passwd from admin_info where id_tel=")+tel;
+    if(mysql_query(&mysql_con, sql.c_str())!=0)
+    {
+        return false;
+    }
+
+    MYSQL_RES *r = mysql_store_result(&mysql_con);
+    if(r == NULL)
+    {
+        return false;
+    }
+
+    int rows = mysql_num_rows(r);
+    int count = mysql_field_count(&mysql_con);
+    if( rows!=1 || count!=2)
+    {
+        cout<<"db res: rows="<<rows<<" count="<<count<<endl;
+        return false;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(r);
+    name = row[0];
+    pw = row[1];
+
+    mysql_free_result(r);
+    return true;
+}
+
+bool Mysql_Client::Db_Tj_user(const string &tel, const string &name, const string &passwd, int state)
+{
+    string sql = string("insert into user_info values('")+tel+string("','")+name+string("','")+passwd+string("',")+to_string(state)+string(")");
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool Mysql_Client::Db_Sc_user(const string &tel)
+{
+    string sql = string("delete from user_info where id_tel=")+tel;
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool Mysql_Client::Db_Ck_user(Json::Value &ck_val)
+{
+    string sql = "select * from user_info";
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+    MYSQL_RES *r = mysql_store_result(&mysql_con);
+    if(r == NULL)
+    {
+        return false;
+    }
+    int num = mysql_num_rows(r);
+    cout<<"共有:"<<num<<"行"<<endl;
+
+    for(int i = 0; i < num; i++)
+    {
+        MYSQL_ROW row = mysql_fetch_row(r);
+        Json::Value tmp;
+        tmp["id_tel"] = row[0];
+        tmp["user_name"] = row[1];
+        tmp["user_passwd"] = row[2];
+        tmp["state"] = stoi(row[3]);
+        ck_val["yh_arr"].append(tmp);
+    }
+    ck_val["status"] = "OK";
+    ck_val["num"] = num;
+
+    mysql_free_result(r);
+    return true;
+}
+
+bool Mysql_Client::Db_Ck_ticket(Json::Value &ck_val)
+{
+    string sql = "select * from ticket_table";
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+
+    MYSQL_RES *r = mysql_store_result(&mysql_con);
+    if(r == NULL)
+    {
+        return false;
+    }
+
+    int num = mysql_num_rows(r);
+    cout<<"共有: "<<num<<"行"<<endl;
+    
+    for(int i=0; i<num; i++)
+    {
+        MYSQL_ROW row = mysql_fetch_row(r);
+        Json::Value tmp;
+        tmp["ticket_id"] = stoi(row[0]);
+        tmp["ticket_name"] = row[1];
+        tmp["ticket_max"] = stoi(row[2]);
+        tmp["count"] = stoi(row[3]);
+        tmp["day_time"] = row[4];
+        ck_val["ticket_arr"].append(tmp);
+    }
+    ck_val["status"] = "OK";
+    ck_val["num"] = num;
+
+    mysql_free_result(r);
+
+    return true;
+}
+
+bool Mysql_Client::Db_Fb_yuyue(const string &tk_name, int tk_max)
+{
+    string sql = string("insert into ticket_table values(0,'")+tk_name+string("',")+to_string(tk_max)+string(",0,'2023-01-01')");
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
 void Mysql_Client::Close_Mysql()
 {
     mysql_close(&mysql_con);
@@ -506,6 +634,155 @@ void Recv_Call_Back::Qxyd_ticket()
     cli.Close_Mysql();
 }
 
+void Recv_Call_Back::Dl_admin()
+{
+    string tel = val["admin_tel"].asString();
+    string pw = val["admin_passwd"].asString();
+
+    if(tel.empty() || pw.empty())
+    {
+        Send_Err();
+        return;
+    }
+
+    Mysql_Client cli;
+    if(!cli.Init_Connect())
+    {
+        Send_Err();
+        return;
+    }
+
+    string db_query_passwd;
+    string admin_name;
+    if(!cli.Db_Dl_admin(tel, admin_name, db_query_passwd))
+    {
+        Send_Err();
+    }
+    if(db_query_passwd.compare(pw) != 0)
+    {
+        Send_Err();
+    }
+    else
+    {
+        Json::Value tmp;
+        tmp["status"] = "OK";
+        tmp["user_name"] = admin_name;
+
+        send(c, tmp.toStyledString().c_str(), strlen(tmp.toStyledString().c_str())+1, 0);
+    }
+
+    cli.Close_Mysql();
+}
+
+void Recv_Call_Back::Tj_user()
+{
+    string tel = val["user_tel"].asString();
+    string name = val["user_name"].asString();
+    string passwd = val["user_passwd"].asString();
+    int state = val["user_state"].asInt();
+    if(tel.empty() || name.empty() || passwd.empty())
+    {
+        Send_Err();
+        return;
+    }
+
+    Mysql_Client cli;
+    cli.Init_Connect();
+    if(!cli.Db_Tj_user(tel, name, passwd, state))
+    {
+        Send_Err();
+        return;
+    }
+    Send_Ok();
+    cli.Close_Mysql();
+}
+
+void Recv_Call_Back::Sc_user()
+{
+    string tel = val["user_tel"].asString();
+    if(tel.empty())
+    {
+        Send_Err();
+        return;
+    }
+
+    Mysql_Client cli;
+    cli.Init_Connect();
+    if(!cli.Db_Sc_user(tel))
+    {
+        Send_Err();
+        return;
+    }
+    Send_Ok();
+    cli.Close_Mysql();
+}
+
+void Recv_Call_Back::Ck_user()
+{
+    Mysql_Client cli;
+    if(!cli.Init_Connect())
+    {
+        Send_Err();
+        return;
+    }
+    Json::Value ck_val;
+    if(!cli.Db_Ck_user(ck_val))
+    {
+        Send_Err();
+        return;
+    }
+
+    send(c, ck_val.toStyledString().c_str(), strlen(ck_val.toStyledString().c_str())+1, 0);
+
+    cli.Close_Mysql();
+}
+
+void Recv_Call_Back::Ck_ticket()
+{
+    Mysql_Client cli;
+    if(!cli.Init_Connect())
+    {
+        Send_Err();
+        return;
+    }
+
+    Json::Value ck_val;
+    if(!cli.Db_Ck_ticket(ck_val))
+    {
+        Send_Err();
+        return;
+    }
+
+    send(c, ck_val.toStyledString().c_str(), strlen(ck_val.toStyledString().c_str())+1, 0);
+
+    cli.Close_Mysql();
+}
+
+void Recv_Call_Back::Fb_yuyue()
+{
+    string tk_name = val["tk_name"].asString();
+    int tk_max = val["tk_max"].asInt();
+    if(tk_name.empty())
+    {
+        Send_Err();
+        return;
+    }
+
+    Mysql_Client cli;
+    if(!cli.Init_Connect())
+    {
+        Send_Err();
+        return;
+    }
+    if(!cli.Db_Fb_yuyue(tk_name, tk_max))
+    {
+        Send_Err();
+        return;
+    }
+    Send_Ok();
+    cli.Close_Mysql();
+}
+
 //连接套接字回调函数
 void Recv_Call_Back::Call_Back_Fun()
 {
@@ -553,6 +830,24 @@ void Recv_Call_Back::Call_Back_Fun()
         break;
     case QXYD:
         Qxyd_ticket();
+        break;
+    case DL_ADMIN:
+        Dl_admin();
+        break;
+    case TJ:
+        Tj_user();
+        break;
+    case SC:
+        Sc_user();
+        break;
+    case CK_YH:
+        Ck_user();
+        break;
+    case CK_YY:
+        Ck_ticket();
+        break;
+    case FB_YY:
+        Fb_yuyue();
         break;
     default:
         break;

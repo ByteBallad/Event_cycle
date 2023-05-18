@@ -14,7 +14,7 @@ using namespace std;
 
 const int LIS_MAX = 5;
 
-enum CHO_TYPE {DL=1, ZC, CK, YD, XSYD, QXYD, TC};
+enum CHO_TYPE {DL=1, ZC, CK, YD, XSYD, QXYD, TC, DL_ADMIN, TJ, SC, CK_YH, CK_YY, FB_YY, SC_YY, TC_ADMIN};
 
 class MyLibevent;
 
@@ -99,6 +99,17 @@ public:
 
     bool Db_Qxyd_ticket(int yd_id);
 
+    bool Db_Dl_admin(const string &tel, string &name, string &pw);
+
+    bool Db_Tj_user(const string &tel, const string &name, const string &passwd, int state);
+
+    bool Db_Sc_user(const string &tel);
+
+    bool Db_Ck_user(Json::Value &ck_val);
+
+    bool Db_Ck_ticket(Json::Value &ck_val);
+
+    bool Db_Fb_yuyue(const string &tk_name, int tk_max);
 
 private:
     string db_ip;
@@ -149,6 +160,15 @@ public:
         map_table.insert(make_pair("YD", YD));
         map_table.insert(make_pair("XSYD", XSYD));
         map_table.insert(make_pair("QXYD", QXYD));
+
+        map_table.insert(make_pair("DL_ADMIN", DL_ADMIN));
+        map_table.insert(make_pair("TJ", TJ));
+        map_table.insert(make_pair("SC", SC));
+        map_table.insert(make_pair("CK_YH", CK_YH));
+        map_table.insert(make_pair("CK_YY", CK_YY));
+        map_table.insert(make_pair("FB_YY", FB_YY));
+        map_table.insert(make_pair("SC_YY", SC_YY));
+        map_table.insert(make_pair("TC_ADMIN", TC_ADMIN));
     }
     void Call_Back_Fun();
 
@@ -168,6 +188,18 @@ private:
     void Xsyd_ticket();
 
     void Qxyd_ticket();
+
+    void Dl_admin();
+
+    void Tj_user();
+
+    void Sc_user();
+
+    void Ck_user();
+
+    void Ck_ticket();
+
+    void Fb_yuyue();
 
 private:
     int c;

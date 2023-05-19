@@ -11,7 +11,7 @@
 
 using namespace std;
 
-enum CHO_TYPE {DL_ADMIN=8, TJ, SC, CK_YH, CK_YY, FB_YY, SC_YY, TC_ADMIN};
+enum CHO_TYPE {DL_ADMIN=1, TJ, SC, CK_YH, CK_YY, FB_YY, SC_YY, TC_ADMIN};
 
 class Admin
 {
@@ -62,6 +62,8 @@ private:
     void Ck_ticket();
 
     void Fb_yuyue();
+
+    void Sc_yuyue();
 
 private:
     int sockfd;

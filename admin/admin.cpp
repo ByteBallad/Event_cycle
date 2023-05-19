@@ -321,6 +321,49 @@ void Admin::Fb_yuyue()
     cout<<"发布预约成功"<<endl;
 }
 
+void Admin::Sc_yuyue()
+{
+    cout<<"请输入要删除可预约票的序号:"<<endl;
+    int num;
+    cin>>num;
+    map<int, int>::iterator pos = map_tk.find(num);
+    if(pos == map_tk.end())
+    {
+        cout<<"输入无效"<<endl;
+        return;
+    }
+    int tk_id = pos->second;
+
+    Json::Value val;
+    val["type"] = "SC_YY";
+    val["ticket_id"] = tk_id;
+
+    send(sockfd, val.toStyledString().c_str(), strlen(val.toStyledString().c_str())+1, 0);
+
+    char status_buff[128] = {0};
+    if(recv(sockfd, status_buff, 127, 0) <= 0)
+    {
+        cout<<"ser close"<<endl;
+        return;
+    }
+
+    Json::Value res_val;
+    Json::Reader Read;
+    if(!Read.parse(status_buff, res_val))
+    {
+        cout<<"无法解析Json字符串"<<endl;
+        return;
+    }
+
+    string status_str = res_val["status"].asString();
+    if(status_str.compare("OK") != 0)
+    {
+        cout<<"删除可预约票失败"<<endl;
+        return;
+    }
+    cout<<"删除可预约票成功"<<endl;
+}
+
 void Admin::print_info()
 {
     if(!dl_flg)
@@ -330,7 +373,7 @@ void Admin::print_info()
         cout<<"1 登录"<<endl;
         cout<<"------------------------"<<endl;
         cin>>choice;
-        choice += 7;
+        //choice += 7;
     }
     else
     {
@@ -341,7 +384,7 @@ void Admin::print_info()
         cout<<"7 退出"<<endl;
         cout<<"------------------------"<<endl;
         cin>>choice;
-        choice += 8;
+        choice += 1;
     }
 }
 
@@ -372,7 +415,7 @@ void Admin::run()
             Fb_yuyue();
             break;
         case SC_YY:
-            running = false;
+            Sc_yuyue();
             break;
         case TC_ADMIN:
             running = false;

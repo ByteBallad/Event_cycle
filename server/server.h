@@ -111,6 +111,8 @@ public:
 
     bool Db_Fb_yuyue(const string &tk_name, int tk_max);
 
+    bool Db_Sc_yuyue(int tk_id);
+
 private:
     string db_ip;
     short db_port;
@@ -200,6 +202,8 @@ private:
     void Ck_ticket();
 
     void Fb_yuyue();
+
+    void Sc_yuyue();
 
 private:
     int c;

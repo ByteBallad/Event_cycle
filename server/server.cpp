@@ -434,6 +434,16 @@ bool Mysql_Client::Db_Fb_yuyue(const string &tk_name, int tk_max)
     return true;
 }
 
+bool Mysql_Client::Db_Sc_yuyue(int tk_id)
+{
+    string sql = string("delete from ticket_table where tk_id=")+to_string(tk_id);
+    if(mysql_query(&mysql_con, sql.c_str()) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
 void Mysql_Client::Close_Mysql()
 {
     mysql_close(&mysql_con);
@@ -783,6 +793,25 @@ void Recv_Call_Back::Fb_yuyue()
     cli.Close_Mysql();
 }
 
+void Recv_Call_Back::Sc_yuyue()
+{
+    int tk_id = val["ticket_id"].asInt();
+
+    Mysql_Client cli;
+    if(!cli.Init_Connect())
+    {
+        Send_Err();
+        return;
+    }
+    if(!cli.Db_Sc_yuyue(tk_id))
+    {
+        Send_Err();
+        return;
+    }
+    Send_Ok();
+    cli.Close_Mysql();
+}
+
 //连接套接字回调函数
 void Recv_Call_Back::Call_Back_Fun()
 {
@@ -848,6 +877,9 @@ void Recv_Call_Back::Call_Back_Fun()
         break;
     case FB_YY:
         Fb_yuyue();
+        break;
+    case SC_YY:
+        Sc_yuyue();
         break;
     default:
         break;
